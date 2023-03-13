@@ -60,13 +60,17 @@ PRODUCT_SOONG_NAMESPACES += \
 	vendor/google_nos/host/android \
 	vendor/google_nos/test/system-test-harness
 
+LOCAL_KERNEL := $(TARGET_KERNEL_DIR)/Image.lz4
+
 # OEM Unlock reporting
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += \
 	ro.oem_unlock_supported=1
 
+ifneq ($(BOARD_WITHOUT_RADIO),true)
 # Include vendor telephony soong namespace
 PRODUCT_SOONG_NAMESPACES += \
 	vendor/samsung_slsi/telephony/$(BOARD_USES_SHARED_VENDOR_TELEPHONY)
+endif
 
 ifneq (,$(filter eng, $(TARGET_BUILD_VARIANT)))
 #Set IKE logs to verbose for WFC
@@ -262,6 +266,7 @@ PRODUCT_ENFORCE_PRODUCT_PARTITION_INTERFACE := true
 
 # Init files
 PRODUCT_COPY_FILES += \
+	$(LOCAL_KERNEL):kernel \
 	device/google/gs101/conf/init.gs101.usb.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/hw/init.gs101.usb.rc \
 	device/google/gs101/conf/ueventd.gs101.rc:$(TARGET_COPY_OUT_VENDOR)/etc/ueventd.rc
 
@@ -712,7 +717,7 @@ PRODUCT_CHARACTERISTICS := nosdcard
 
 # WPA SUPPLICANT
 PRODUCT_COPY_FILES += \
-	device/google/gs101/wifi/p2p_supplicant.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/p2p_supplicant.conf \
+	device/google/gs101/wifi/p2p_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/p2p_supplicant_overlay.conf \
 	device/google/gs101/wifi/wpa_supplicant_overlay.conf:$(TARGET_COPY_OUT_VENDOR)/etc/wifi/wpa_supplicant_overlay.conf
 
 # WIFI COEX
@@ -898,6 +903,7 @@ PRODUCT_PACKAGES += \
 	calliope_iva.bin \
 	vts.bin
 
+ifneq ($(BOARD_WITHOUT_RADIO),true)
 # This will be called only if IMSService is building with source code for dev branches.
 $(call inherit-product-if-exists, vendor/samsung_slsi/telephony/$(BOARD_USES_SHARED_VENDOR_TELEPHONY)/shannon-ims/device-vendor.mk)
 
@@ -912,6 +918,7 @@ PRODUCT_PACKAGES_DEBUG += \
 endif
 
 PRODUCT_PACKAGES += ShannonRcs
+endif
 
 # Boot Control HAL
 PRODUCT_PACKAGES += \
@@ -943,7 +950,11 @@ endif
 #$(call inherit-product-if-exists, hardware/google_devices/gs101/gs101.mk)
 #$(call inherit-product-if-exists, vendor/google_devices/common/exynos-vendor.mk)
 #$(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/firmware/bcm4375/device-bcm.mk)
+ifeq ($(wildcard vendor/google/sensors/usf),)
+$(call inherit-product-if-exists, vendor/google_devices/gs101/proprietary/usf/usf_product.mk)
+else
 $(call inherit-product-if-exists, vendor/google/sensors/usf/android/usf_efw_product.mk)
+endif
 $(call inherit-product-if-exists, vendor/google/services/LyricCameraHAL/src/build/device-vendor.mk)
 $(call inherit-product-if-exists, vendor/google/camera/devices/whi/device-vendor.mk)
 
@@ -1060,6 +1071,7 @@ PRODUCT_SOONG_NAMESPACES += \
         vendor/google/whitechapel/aoc
 
 $(call soong_config_set,aoc,target_soc,$(TARGET_BOARD_PLATFORM))
+$(call soong_config_set,aoc,target_product,$(TARGET_PRODUCT))
 
 $(call soong_config_set,android_hardware_audio,run_64bit,true)
 
@@ -1164,8 +1176,10 @@ include hardware/google/pixel/common/pixel-common-device.mk
 # Pixel Logger
 include hardware/google/pixel/PixelLogger/PixelLogger.mk
 
+ifneq ($(BOARD_WITHOUT_RADIO),true)
 # Telephony
 include device/google/gs101/telephony/user.mk
+endif
 
 # Wifi ext
 include hardware/google/pixel/wifi_ext/device.mk

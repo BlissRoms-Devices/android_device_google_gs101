@@ -14,28 +14,29 @@
 # limitations under the License.
 #
 
-DEVICE_PACKAGE_OVERLAYS += \
-	device/google/gs101/overlay_common \
-	device/google/gs101/overlay_bliss
+-include vendor/gapps/arm64/arm64-vendor.mk
 
-# Rescue Party
-PRODUCT_PROPERTY_OVERRIDES += \
-persist.sys.disable_rescue=true
+DEVICE_PACKAGE_OVERLAYS += \
+	device/google/gs101/overlay_bliss
 
 EXTRA_UDFPS_ANIMATIONS := true
 TARGET_FACE_UNLOCK_SUPPORTED := true
 BLISS_BUILDTYPE := OFFICIAL
 
 # Boot animation
-TARGET_BOOT_ANIMATION_RES := 1440
+TARGET_BOOT_ANIMATION_RES := 1080
 
+ifneq ($(BOARD_WITHOUT_RADIO),true)
 -include vendor/google_devices/gs101/proprietary/telephony/device-vendor.mk
+endif
 include device/google/gs101/device.mk
 include device/google/gs101/tts/voice_packs.mk
 
+ifneq ($(BOARD_WITHOUT_RADIO),true)
 # Telephony
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.telephony.carrierlock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.telephony.carrierlock.xml
+endif
 
 # Android Verified Boot
 PRODUCT_COPY_FILES += \
