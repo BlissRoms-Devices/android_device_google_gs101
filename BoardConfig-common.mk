@@ -161,6 +161,7 @@ TARGET_COPY_OUT_SYSTEM_EXT := system_ext
 # Video Codec
 ########################
 # 1. Exynos C2
+BOARD_USE_CODEC2_HIDL_1_2 := true
 BOARD_USE_CSC_FILTER := false
 BOARD_USE_DEC_SW_CSC := true
 BOARD_USE_ENC_SW_CSC := true
@@ -337,6 +338,40 @@ BOARD_DTBOIMG_PARTITION_SIZE := 0x01000000
 
 # Vendor ramdisk image for kernel development
 BOARD_BUILD_VENDOR_RAMDISK_IMAGE := true
+
+KERNEL_MODULE_DIR := $(TARGET_KERNEL_DIR)
+KERNEL_MODULES := $(wildcard $(KERNEL_MODULE_DIR)/*.ko)
+
+BOARD_VENDOR_KERNEL_MODULES_BLOCKLIST_FILE := $(KERNEL_MODULE_DIR)/vendor_dlkm.modules.blocklist
+
+# Since Pixel 6/6pro doesn't have a system_dlkm partition, the GKI modules are
+# on the vendor_dlkm partition. In order to allow them to load properly, we
+# need to retain the module signature which would normally get stripped during
+# packaging. Disable stripping the vendor_dlkm modules to retain the GKI
+# modules' signature. Note, the pixel kernel builds always strip the modules in
+# favor of saving space via the kleaf property: strip_modules = True.
+BOARD_DO_NOT_STRIP_VENDOR_MODULES := true
+
+# Prebuilt kernel modules that are *not* listed in vendor_boot.modules.load
+BOARD_PREBUILT_VENDOR_RAMDISK_KERNEL_MODULES = fips140/fips140.ko
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_EXTRA = $(foreach k,$(BOARD_PREBUILT_VENDOR_RAMDISK_KERNEL_MODULES),$(if $(wildcard $(KERNEL_MODULE_DIR)/$(k)), $(k)))
+KERNEL_MODULES += $(addprefix $(KERNEL_MODULE_DIR)/, $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_EXTRA))
+
+# Kernel modules that are listed in vendor_boot.modules.load
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_FILE := $(strip $(shell cat $(KERNEL_MODULE_DIR)/vendor_boot.modules.load))
+ifndef BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_FILE
+$(error vendor_boot.modules.load not found or empty)
+endif
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD := $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_EXTRA)
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD += $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_FILE)
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES := $(addprefix $(KERNEL_MODULE_DIR)/, $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_EXTRA))
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES += $(addprefix $(KERNEL_MODULE_DIR)/, $(notdir $(BOARD_VENDOR_RAMDISK_KERNEL_MODULES_LOAD_FILE)))
+
+BOARD_VENDOR_KERNEL_MODULES_LOAD += $(strip $(shell cat $(KERNEL_MODULE_DIR)/vendor_dlkm.modules.load))
+ifndef BOARD_VENDOR_KERNEL_MODULES_LOAD
+$(error vendor_dlkm.modules.load not found or empty)
+endif
+BOARD_VENDOR_KERNEL_MODULES += $(KERNEL_MODULES)
 
 # Using BUILD_COPY_HEADERS
 BUILD_BROKEN_USES_BUILD_COPY_HEADERS := true
